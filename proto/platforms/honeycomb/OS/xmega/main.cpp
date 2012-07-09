@@ -17,6 +17,7 @@ ISR(TCC0_OVF_vect)
 {
 	jiffies++;	// Timers
 
+	// set flags every 100ms
 	if(jiffies%100 == 0)
 	{
 		servo_motor_on   = true;
@@ -81,6 +82,7 @@ ISR(TCC0_OVF_vect)
 	xgrid.process();
 }
 
+// heartbeat (left bottom device)
 void StageInit(int StageTime, const char str[])
 {
 	if(sec_counter == StageTime && special)
@@ -96,6 +98,8 @@ void StageInit(int StageTime, const char str[])
 int main(void)
 {
 	float angle = 0;
+	// last key pressed
+	char last_press = 0;
 	
 	xgrid.rx_pkt = &rx_pkt;
 
@@ -104,7 +108,9 @@ int main(void)
 	// ========== INITIALIZATION ==========
     init();				//for board
 	init_servo();		//for servo
-	init_variables();	//for program
+	// initialize variables in proto.
+	// FIXME enables the servos too.
+	//init_variables();	//for program
 	init_sonar();		//for sensor
 
 	fprintf_P(&usart_stream, PSTR("START (build number : %ld)\r\n"), (unsigned long) &__BUILD_NUMBER);
@@ -112,13 +118,11 @@ int main(void)
 	// ===== SONAR CHECK & Indicated by LED (attached/not = GREEN/RED) =====
 	sonar_attached = check_sonar_attached();	//1:attached, 0:no
 
-	if(sonar_attached)	{LED_PORT.OUT = LED_USR_2_PIN_bm; _delay_ms(2000);}
-	else				{LED_PORT.OUT = LED_USR_0_PIN_bm; _delay_ms(2000);}
+	//  visual indicator of sonar check (disabled)
+	//if(sonar_attached)	{LED_PORT.OUT = LED_USR_2_PIN_bm; _delay_ms(2000);}
+	//else				{LED_PORT.OUT = LED_USR_0_PIN_bm; _delay_ms(2000);}
 
-	// ===== Identification of Left Bottom Corner module =====
-	// Special module is necessary 
-	// 1) as a pace maker in "rhythm" mode,
-	// 2) as a messanger of variable-reset signal 
+	// determine connectivity (connected global)
 	temp_time = jiffies + 2000;
 	while(jiffies < temp_time)
 	{
@@ -129,7 +133,12 @@ int main(void)
 			sendmessage_fast = false;
 		}
 	}
-	if(!connected[0] && connected[2] && connected[3] && !connected[4]) special = true;
+	// detect left bottom corner in proto
+	// ===== Identification of Left Bottom Corner module =====
+	// Special module is necessary
+	// 1) as a pace maker in "rhythm" mode,
+	// 2) as a messanger of variable-reset signal
+	// if(!connected[0] && connected[2] && connected[3] && !connected[4]) special = true;
 	
 
 	// #################### MAIN LOOP ####################
@@ -145,26 +154,30 @@ int main(void)
 		}
 			
 		// ========== KEY INPUT ==========
-		key_input();
+		last_press = key_input(); // TODO remove side effects from key input
 
 		// ========== CALCULATION ==========
+		// this seems to be initialization
 		if(sonar_attached && !communication_on)
 		{
+			// waits for sensor value to reach threshold RANGE1. Why?
 			if(sensor_value_trichk > RANGE1 && sensor_value_trichk < RANGE3)
 			{
-				send_message(MESSAGE_COMMAND, ALL_DIRECTION, ALL, "R");
+				send_message(MESSAGE_COMMAND, ALL_DIRECTION, ALL, "R"); // run mode
 				_delay_ms(100);
-				send_message(MESSAGE_COMMAND, ALL_DIRECTION, ALL, "1");
+				send_message(MESSAGE_COMMAND, ALL_DIRECTION, ALL, "1"); // first phase
 				communication_on = true;
 			}
 		}
 
+		// main loop. Flag set at initialization
 		if(communication_on)
 		{
 			// ========== SENSOR DATA ==========
 			//SENSOR: works every 200 ms (See ISR() function)
 
 			// ========== SELECT BEHAVIOR ==========
+			// when sendmessage_fast flag set (e.g. every 100ms)
 			if(sendmessage_fast)
 			{
 				// SCENARIO
@@ -174,6 +187,8 @@ int main(void)
 //angle = 90 * rhythm_control3();
 
 				// === STAGE 2: Rhythm 2 (Frequency Modulation)
+				// these next two lines are sec_counter = max(message from bottom left, sec_counter)
+				// the bottom left sends a message to devices to advance their counter, or they may advance on their own
 				StageInit(STGtime2, "2");
 				if(sec_counter > STGtime2 && sec_counter < STGtime3)
 					angle = 45 * rhythm_control2();
@@ -188,7 +203,7 @@ int main(void)
 				// === STAGE 4: Break
 				StageInit(STGtime4, "4");
 				if(sec_counter > STGtime4 && sec_counter < STGtime5)
-					disable_servo();
+					disable_servo(); // What does this do?
 
 
 				// === STAGE 5: Ken's model
@@ -222,7 +237,9 @@ int main(void)
 
 
 				// === Waiting for next run
-				StageInit(LASTtime, "0");
+				StageInit(LASTtime, "0"); // advance all timers to LASTtime
+
+				// flood reboot message
 				if(sec_counter > LASTtime)
 				{
 					send_message(MESSAGE_COMMAND, ALL_DIRECTION, ALL, "Z");
@@ -235,6 +252,8 @@ int main(void)
 			}
 		
 			// ========== SERVO MOTOR CONTROL ==========
+			// when flag set (e.g. every 100ms)
+			// note that the servo may be disabled or enabled
 			if(servo_motor_on)
 			{
 				set_servo_position(angle);
@@ -243,6 +262,9 @@ int main(void)
 		}
 
 		// ==========  DISPLAY ==========
+		// debugging information (different than debug mode)
+		// display_on: message sent to main
+		// display: global debug flag
 		if(display_on && display)
 		{
 			if(!communication_on) fprintf_P(&usart_stream, PSTR("NO COMM.\r\n"));

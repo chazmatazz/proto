@@ -33,6 +33,7 @@ void send_message(uint8_t MessageType, uint8_t direction, int dist, const char s
 // ============================================================================================
 // receive packet
 // ============================================================================================
+// this repeats code in key_press
 void rx_pkt(Xgrid::Packet *pkt)
 {
 	uint8_t port = pkt->rx_node;	//pkt->rx_node
