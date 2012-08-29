@@ -97,7 +97,7 @@ Proto has been tested on the following platforms:
 * Debian Lenny, CSAIL Debian, Ubuntu Gutsy & Hardy, Linux Mint Darnya
 * Fedora Sulphur 9, CentOS 5
 * PC-BSD 1.5.1 [currently not working]
-* Mac OS X: 10.4, 10.5, 10.6
+* Mac OS X: 10.4, 10.5, 10.6, 10.7, 10.8
 * Windows: XP (with Cygwin), Vista (with Cygwin)
 
 If you have the required dependencies, we expect Proto to work without
@@ -148,8 +148,10 @@ B. Windows
 
 C. MacOS X
 * If OpenGL and GNU tools aren't already installed, install the
-  following Xcode packages: DevSDK.pkg and OpenGLSDK.pkg.  For recent OS
-  versions (e.g., 10.6), everything is provided by the XCode distribution.
+  following Xcode packages: DevSDK.pkg and OpenGLSDK.pkg.  For some OS
+  versions (e.g., 10.6), everything is provided by the Xcode distribution. 
+  For later versions you must install the command line tools from Xcode. 
+  Versions of Xcode >= 4.3 do not include autoconf and automake.
 * If you can't right click (e.g. to zoom), then check the application
   preferences and make sure that multi-button mouse emulation is
   turned on.
@@ -159,6 +161,8 @@ C. MacOS X
   have it install as "glibtool" rather than "libtool" (it is renamed
   in Mac OS X to avoid conflict with a different Apple-provided
   utility).  You shouldn't have any problems in 10.6.
+* Suggested approach: install autoconf, automake and libtool via Homebrew.
+  Hombrew will install libtool as glibtool and glibtoolize.
 
 D. BSD
 * You need GNU Make to compile proto.  This is not the default BSD make.

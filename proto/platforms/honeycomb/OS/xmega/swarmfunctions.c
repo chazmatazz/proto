@@ -118,7 +118,7 @@ float rhythm_control1()	//Amplitude Modulation
 }
 
 // --------------------------------------------------------------------------------------------
-float rhythm_control2()	//Frequency Modulation
+float rhythm_control2()	//Frequency Modulation <-- this one
 {
 	static int timestep = 0;
 	float stp, tim, dtim = 2.0 * PI / 30.0;	// 1cycle = 30 sec
